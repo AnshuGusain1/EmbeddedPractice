@@ -56,6 +56,32 @@ void mpu6050_init(void) {
   }
 
   reg_data = 0;
+
+  status = HAL_I2C_Mem_Write(&hi2c1, MPU6050_ADDRESS << 1, REG_INT_CONFG, 1,
+                             &reg_data, 1, 100);
+
+  if (status == HAL_OK) {
+    sprintf((char *)buf, "configured interrupt \r\n");
+    HAL_UART_Transmit(&huart2, buf, strlen((char *)buf), HAL_MAX_DELAY);
+  } else {
+    sprintf((char *)buf, "failed to configure interrupt\r\n");
+    HAL_UART_Transmit(&huart2, buf, strlen((char *)buf), HAL_MAX_DELAY);
+  }
+
+  reg_data = DATA_RDY_EN;
+  status = HAL_I2C_Mem_Write(&hi2c1, MPU6050_ADDRESS << 1, REG_INT_ENABLE, 1,
+                             &reg_data, 1, 100);
+
+  if (status == HAL_OK) {
+    sprintf((char *)buf, "data Interrupt enabled \r\n");
+    HAL_UART_Transmit(&huart2, buf, strlen((char *)buf), HAL_MAX_DELAY);
+  } else {
+    sprintf((char *)buf, "failed to enable data int\r\n");
+    HAL_UART_Transmit(&huart2, buf, strlen((char *)buf), HAL_MAX_DELAY);
+  }
+
+  reg_data = 0;
+
   status = HAL_I2C_Mem_Write(&hi2c1, MPU6050_ADDRESS << 1, REG_USR_CTRL, 1,
                              &reg_data, 1, 100);
 
@@ -151,11 +177,11 @@ void mpu6050_request_data(void) {
   HAL_StatusTypeDef status = HAL_I2C_Mem_Read_IT(&hi2c1, MPU6050_ADDRESS << 1,
                                                  0x3B, 1, i2c_rx_buffer, 6);
 
-  if (status != HAL_OK) {
-    uint8_t buf[24];
-    sprintf((char *)buf, "failed request\r\n");
-    HAL_UART_Transmit(&huart2, buf, strlen((char *)buf), HAL_MAX_DELAY);
-  }
+  // if (status != HAL_OK) {
+  //   uint8_t buf[24];
+  //   sprintf((char *)buf, "failed request\r\n");
+  //   HAL_UART_Transmit(&huart2, buf, strlen((char *)buf), HAL_MAX_DELAY);
+  // }
 }
 
 void HAL_I2C_MemRxCpltCallback(I2C_HandleTypeDef *hi2c) {

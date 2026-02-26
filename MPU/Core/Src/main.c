@@ -111,7 +111,6 @@ int main(void) {
   /* USER CODE BEGIN WHILE */
   while (1) {
 
-    mpu6050_request_data();
     while (i2c_ready_flag == 0) {
       // PID compute etc...
     }
@@ -129,7 +128,7 @@ int main(void) {
     y_raw = (int16_t)(i2c_rx_buffer[2] << 8 | i2c_rx_buffer[3]);
     z_raw = (int16_t)(i2c_rx_buffer[4] << 8 | i2c_rx_buffer[5]);
 
-    // Convert to mg (assuming +/- 2g range, sensitivity = 16384 LSB/g)
+    // Convert to mg (assuming +/- 4g range, sensitivity = 16384 LSB/g)
     x_mg = ((int32_t)x_raw * 1000) / 8192;
     y_mg = ((int32_t)y_raw * 1000) / 8192;
     z_mg = ((int32_t)z_raw * 1000) / 8192;
@@ -299,12 +298,36 @@ static void MX_GPIO_Init(void) {
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(LD2_GPIO_Port, &GPIO_InitStruct);
 
+  /*Configure GPIO pin : PA7 */
+  GPIO_InitStruct.Pin = GPIO_PIN_7;
+  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+
+  /* EXTI interrupt init*/
+  HAL_NVIC_SetPriority(EXTI9_5_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(EXTI9_5_IRQn);
+
+  HAL_NVIC_SetPriority(EXTI15_10_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(EXTI15_10_IRQn);
+
   /* USER CODE BEGIN MX_GPIO_Init_2 */
 
   /* USER CODE END MX_GPIO_Init_2 */
 }
 
 /* USER CODE BEGIN 4 */
+
+void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
+  /* Prevent unused argument(s) compilation warning */
+  UNUSED(GPIO_Pin);
+  if (GPIO_Pin == GPIO_PIN_7) { // PA7 (your MPU INT)
+    mpu6050_request_data();
+  }
+  /* NOTE: This function should not be modified, when the callback is needed,
+           the HAL_GPIO_EXTI_Callback could be implemented in the user file
+   */
+}
 
 /* USER CODE END 4 */
 

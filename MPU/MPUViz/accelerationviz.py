@@ -6,11 +6,11 @@ import numpy as np
 from collections import deque
 
 # --- CONFIGURATION ---
-SERIAL_PORT = '/dev/tty.usbmodem21403' 
+SERIAL_PORT = '/dev/tty.usbmodem11403' 
 BAUD_RATE = 115200
 HISTORY_SIZE = 100
 # Adjust this based on your MPU6050's Full Scale Range (Default is 16384 for +/- 2g)
-LSB_PER_G = 8192.0
+LSB_PER_G = 16384.0
 GRAVITY = 9.81
 
 # Data buffers

@@ -17,6 +17,10 @@ void mpu6050_request_data(void);
 #define FS_ACC_8G 9
 #define FS_ACC_16G 10
 
+#define DATA_RDY_EN 1
+
+#define REG_INT_CONFG 55
+#define REG_INT_ENABLE 56
 #define REG_CONFIG_GYRO 27
 #define REG_CONFIG_ACC 28
 #define REG_USR_CTRL 107
