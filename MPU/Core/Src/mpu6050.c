@@ -17,10 +17,29 @@ extern uint8_t i2c_rx_buffer[6];
 extern volatile uint8_t i2c_ready_flag;
 
 void mpu6050_init(void) {
-  uint8_t buf[32];
 
   HAL_StatusTypeDef status =
-      HAL_I2C_IsDeviceReady(&hi2c1, MPU6050_ADDRESS << 1, 1, 50);
+      HAL_I2C_IsDeviceReady(&hi2c1, MPU6050_ADDRESS << 1, 5, 1000);
+
+  if (status != HAL_OK) {
+    return;
+  }
+  uint8_t buf[32];
+
+  uint8_t reg_data = 0;
+
+  status = HAL_I2C_Mem_Write(&hi2c1, MPU6050_ADDRESS << 1, REG_USR_CTRL, 1,
+                             &reg_data, 1, 100);
+
+  if (status == HAL_OK) {
+    sprintf((char *)buf, "exited from sleep mode \r\n");
+    HAL_UART_Transmit(&huart2, buf, strlen((char *)buf), HAL_MAX_DELAY);
+  } else {
+    sprintf((char *)buf, "still snoozing \r\n");
+    HAL_UART_Transmit(&huart2, buf, strlen((char *)buf), HAL_MAX_DELAY);
+  }
+
+  status = HAL_I2C_IsDeviceReady(&hi2c1, MPU6050_ADDRESS << 1, 1, 50);
   if (status == HAL_OK) {
     sprintf((char *)buf, "the device is ready \r\n");
     HAL_UART_Transmit(&huart2, buf, strlen((char *)buf), HAL_MAX_DELAY);
@@ -30,7 +49,7 @@ void mpu6050_init(void) {
   }
 
   // gyro config
-  uint8_t reg_data = FS_GYRO_500;
+  reg_data = FS_GYRO_500;
   status = HAL_I2C_Mem_Write(&hi2c1, MPU6050_ADDRESS << 1, REG_CONFIG_GYRO, 1,
                              &reg_data, 1, 100);
 
@@ -55,7 +74,8 @@ void mpu6050_init(void) {
     HAL_UART_Transmit(&huart2, buf, strlen((char *)buf), HAL_MAX_DELAY);
   }
 
-  reg_data = 0;
+  reg_data =
+      0x10; // INT_RD_CLEAR = 1: clear interrupt on any data register read
 
   status = HAL_I2C_Mem_Write(&hi2c1, MPU6050_ADDRESS << 1, REG_INT_CONFG, 1,
                              &reg_data, 1, 100);
@@ -77,19 +97,6 @@ void mpu6050_init(void) {
     HAL_UART_Transmit(&huart2, buf, strlen((char *)buf), HAL_MAX_DELAY);
   } else {
     sprintf((char *)buf, "failed to enable data int\r\n");
-    HAL_UART_Transmit(&huart2, buf, strlen((char *)buf), HAL_MAX_DELAY);
-  }
-
-  reg_data = 0;
-
-  status = HAL_I2C_Mem_Write(&hi2c1, MPU6050_ADDRESS << 1, REG_USR_CTRL, 1,
-                             &reg_data, 1, 100);
-
-  if (status == HAL_OK) {
-    sprintf((char *)buf, "exited from sleep mode \r\n");
-    HAL_UART_Transmit(&huart2, buf, strlen((char *)buf), HAL_MAX_DELAY);
-  } else {
-    sprintf((char *)buf, "still snoozing \r\n");
     HAL_UART_Transmit(&huart2, buf, strlen((char *)buf), HAL_MAX_DELAY);
   }
 }
@@ -174,8 +181,7 @@ void mpu6050_calibrate(void) {
 }
 
 void mpu6050_request_data(void) {
-  HAL_StatusTypeDef status = HAL_I2C_Mem_Read_IT(&hi2c1, MPU6050_ADDRESS << 1,
-                                                 0x3B, 1, i2c_rx_buffer, 6);
+  HAL_I2C_Mem_Read_IT(&hi2c1, MPU6050_ADDRESS << 1, 0x3B, 1, i2c_rx_buffer, 6);
 
   // if (status != HAL_OK) {
   //   uint8_t buf[24];

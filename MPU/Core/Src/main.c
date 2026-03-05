@@ -62,7 +62,7 @@ static void MX_GPIO_Init(void);
 static void MX_I2C1_Init(void);
 static void MX_USART2_UART_Init(void);
 /* USER CODE BEGIN PFP */
-
+void i2c_scan(void);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -102,6 +102,8 @@ int main(void) {
   MX_I2C1_Init();
   MX_USART2_UART_Init();
   /* USER CODE BEGIN 2 */
+  HAL_Delay(100);
+  i2c_scan();
   mpu6050_init();
   mpu6050_calibrate();
 
@@ -129,14 +131,13 @@ int main(void) {
     z_raw = (int16_t)(i2c_rx_buffer[4] << 8 | i2c_rx_buffer[5]);
 
     // Convert to mg (assuming +/- 4g range, sensitivity = 16384 LSB/g)
-    x_mg = ((int32_t)x_raw * 1000) / 8192;
-    y_mg = ((int32_t)y_raw * 1000) / 8192;
-    z_mg = ((int32_t)z_raw * 1000) / 8192;
+    x_mg = ((int32_t)x_raw * 1000) / 16384.0;
+    y_mg = ((int32_t)y_raw * 1000) / 16384.0;
+    z_mg = ((int32_t)z_raw * 1000) / 16384.0;
 
     // Format for Serial Plotter: "x,y,z\r\n"
     sprintf((char *)buff, "%ld,%ld,%ld\r\n", x_raw, y_raw, z_raw);
     HAL_UART_Transmit(&huart2, buff, strlen((char *)buff), HAL_MAX_DELAY);
-    HAL_Delay(100);
 
     /* USER CODE END WHILE */
 
@@ -327,6 +328,31 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
   /* NOTE: This function should not be modified, when the callback is needed,
            the HAL_GPIO_EXTI_Callback could be implemented in the user file
    */
+}
+
+void i2c_scan(void) {
+  uint8_t buf[64];
+  sprintf((char *)buf, "Scanning I2C bus...\r\n");
+  HAL_UART_Transmit(&huart2, buf, strlen((char *)buf), HAL_MAX_DELAY);
+
+  int found = 0;
+
+  for (uint8_t addr = 1; addr < 128; addr++) {
+    HAL_StatusTypeDef result = HAL_I2C_IsDeviceReady(&hi2c1, addr << 1, 2, 10);
+    if (result == HAL_OK) {
+      sprintf((char *)buf, "Device found at 0x%02X\r\n", addr);
+      HAL_UART_Transmit(&huart2, buf, strlen((char *)buf), HAL_MAX_DELAY);
+      found++;
+    }
+  }
+
+  if (found == 0) {
+    sprintf((char *)buf, "No devices found.\r\n");
+    HAL_UART_Transmit(&huart2, buf, strlen((char *)buf), HAL_MAX_DELAY);
+  } else {
+    sprintf((char *)buf, "Scan complete. %d device(s) found.\r\n", found);
+    HAL_UART_Transmit(&huart2, buf, strlen((char *)buf), HAL_MAX_DELAY);
+  }
 }
 
 /* USER CODE END 4 */
