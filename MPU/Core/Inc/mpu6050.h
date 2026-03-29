@@ -6,7 +6,7 @@ void mpu6050_read(void);
 void mpu6050_calibrate(void);
 void mpu6050_request_data(void);
 
-#define MPU6050_ADDRESS 0x69
+#define MPU6050_ADDRESS 0x68
 #define FS_GYRO_250 0
 #define FS_GYRO_500 8
 #define FS_GYRO_1000 9

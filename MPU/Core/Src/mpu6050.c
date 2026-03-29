@@ -8,7 +8,7 @@
 #include <string.h>
 
 extern I2C_HandleTypeDef hi2c1;
-extern UART_HandleTypeDef huart2;
+extern UART_HandleTypeDef huart2, huart1;
 
 int16_t accel_offset_x, accel_offset_y, accel_offset_z;
 int16_t gyro_offset_x, gyro_offset_y, gyro_offset_z;
@@ -18,28 +18,23 @@ extern volatile uint8_t i2c_ready_flag;
 
 void mpu6050_init(void) {
 
-  HAL_StatusTypeDef status =
-      HAL_I2C_IsDeviceReady(&hi2c1, MPU6050_ADDRESS << 1, 5, 1000);
-
-  if (status != HAL_OK) {
-    return;
-  }
+  uint8_t reg_data = 0x00;
   uint8_t buf[32];
 
-  uint8_t reg_data = 0;
-
-  status = HAL_I2C_Mem_Write(&hi2c1, MPU6050_ADDRESS << 1, REG_USR_CTRL, 1,
-                             &reg_data, 1, 100);
+  HAL_StatusTypeDef status =
+      HAL_I2C_Mem_Write(&hi2c1, MPU6050_ADDRESS << 1, REG_USR_CTRL, 1,
+                        &reg_data, 1, HAL_MAX_DELAY);
 
   if (status == HAL_OK) {
     sprintf((char *)buf, "exited from sleep mode \r\n");
-    HAL_UART_Transmit(&huart2, buf, strlen((char *)buf), HAL_MAX_DELAY);
+    HAL_UART_Transmit(&huart1, buf, strlen((char *)buf), HAL_MAX_DELAY);
   } else {
     sprintf((char *)buf, "still snoozing \r\n");
-    HAL_UART_Transmit(&huart2, buf, strlen((char *)buf), HAL_MAX_DELAY);
+    HAL_UART_Transmit(&huart1, buf, strlen((char *)buf), HAL_MAX_DELAY);
   }
 
-  status = HAL_I2C_IsDeviceReady(&hi2c1, MPU6050_ADDRESS << 1, 1, 50);
+  status =
+      HAL_I2C_IsDeviceReady(&hi2c1, MPU6050_ADDRESS << 1, 1, HAL_MAX_DELAY);
   if (status == HAL_OK) {
     sprintf((char *)buf, "the device is ready \r\n");
     HAL_UART_Transmit(&huart2, buf, strlen((char *)buf), HAL_MAX_DELAY);
@@ -51,7 +46,7 @@ void mpu6050_init(void) {
   // gyro config
   reg_data = FS_GYRO_500;
   status = HAL_I2C_Mem_Write(&hi2c1, MPU6050_ADDRESS << 1, REG_CONFIG_GYRO, 1,
-                             &reg_data, 1, 100);
+                             &reg_data, 1, HAL_MAX_DELAY);
 
   if (status == HAL_OK) {
     sprintf((char *)buf, "gyro configured \r\n");
@@ -65,7 +60,7 @@ void mpu6050_init(void) {
   reg_data = FS_ACC_4G;
 
   status = HAL_I2C_Mem_Write(&hi2c1, MPU6050_ADDRESS << 1, REG_CONFIG_ACC, 1,
-                             &reg_data, 1, 100);
+                             &reg_data, 1, HAL_MAX_DELAY);
   if (status == HAL_OK) {
     sprintf((char *)buf, "acc configured \r\n");
     HAL_UART_Transmit(&huart2, buf, strlen((char *)buf), HAL_MAX_DELAY);
@@ -74,11 +69,10 @@ void mpu6050_init(void) {
     HAL_UART_Transmit(&huart2, buf, strlen((char *)buf), HAL_MAX_DELAY);
   }
 
-  reg_data =
-      0x10; // INT_RD_CLEAR = 1: clear interrupt on any data register read
+  reg_data = 0;
 
   status = HAL_I2C_Mem_Write(&hi2c1, MPU6050_ADDRESS << 1, REG_INT_CONFG, 1,
-                             &reg_data, 1, 100);
+                             &reg_data, 1, HAL_MAX_DELAY);
 
   if (status == HAL_OK) {
     sprintf((char *)buf, "configured interrupt \r\n");
@@ -90,7 +84,7 @@ void mpu6050_init(void) {
 
   reg_data = DATA_RDY_EN;
   status = HAL_I2C_Mem_Write(&hi2c1, MPU6050_ADDRESS << 1, REG_INT_ENABLE, 1,
-                             &reg_data, 1, 100);
+                             &reg_data, 1, HAL_MAX_DELAY);
 
   if (status == HAL_OK) {
     sprintf((char *)buf, "data Interrupt enabled \r\n");
@@ -181,7 +175,8 @@ void mpu6050_calibrate(void) {
 }
 
 void mpu6050_request_data(void) {
-  HAL_I2C_Mem_Read_IT(&hi2c1, MPU6050_ADDRESS << 1, 0x3B, 1, i2c_rx_buffer, 6);
+  HAL_StatusTypeDef status = HAL_I2C_Mem_Read_IT(&hi2c1, MPU6050_ADDRESS << 1,
+                                                 0x3B, 1, i2c_rx_buffer, 6);
 
   // if (status != HAL_OK) {
   //   uint8_t buf[24];

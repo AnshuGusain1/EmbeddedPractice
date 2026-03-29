@@ -25,6 +25,8 @@
 #include "mpu6050.h"
 #include "stm32l4xx_hal.h"
 #include "stm32l4xx_hal_conf.h"
+#include "stm32l4xx_hal_def.h"
+#include "stm32l4xx_hal_uart.h"
 #include <stdio.h>
 #include <string.h>
 /* USER CODE END Includes */
@@ -48,6 +50,7 @@ uint8_t buff[64];
 /* Private variables ---------------------------------------------------------*/
 I2C_HandleTypeDef hi2c1;
 
+UART_HandleTypeDef huart1;
 UART_HandleTypeDef huart2;
 
 /* USER CODE BEGIN PV */
@@ -61,8 +64,9 @@ void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_I2C1_Init(void);
 static void MX_USART2_UART_Init(void);
+static void MX_USART1_UART_Init(void);
 /* USER CODE BEGIN PFP */
-void i2c_scan(void);
+
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -101,11 +105,10 @@ int main(void) {
   MX_GPIO_Init();
   MX_I2C1_Init();
   MX_USART2_UART_Init();
+  MX_USART1_UART_Init();
   /* USER CODE BEGIN 2 */
-  HAL_Delay(100);
-  i2c_scan();
-  mpu6050_init();
-  mpu6050_calibrate();
+  // mpu6050_init();
+  // mpu6050_calibrate();
 
   /* USER CODE END 2 */
 
@@ -113,31 +116,34 @@ int main(void) {
   /* USER CODE BEGIN WHILE */
   while (1) {
 
-    while (i2c_ready_flag == 0) {
-      // PID compute etc...
-    }
+    uint8_t message[] = "This is a test transmission";
+    HAL_UART_Transmit(&huart1, message, sizeof(message) - 1, HAL_MAX_DELAY);
+    // while (i2c_ready_flag == 0) {
+    //   // PID compute etc...
+    // }
 
-    i2c_ready_flag = 0;
+    // i2c_ready_flag = 0;
+
+    // // x_raw = (int16_t)(i2c_rx_buffer[0] << 8 | i2c_rx_buffer[1]);
+    // // x_mg = ((int32_t)x_raw * 1000) / 16384;
+
+    // // sprintf((char *)buff, "%ld,%ld,%ld\r\n", x_mg);
+    // // HAL_UART_Transmit(&huart2, buff, strlen((char *)buff), HAL_MAX_DELAY);
+    // // HAL_Delay(50);
 
     // x_raw = (int16_t)(i2c_rx_buffer[0] << 8 | i2c_rx_buffer[1]);
-    // x_mg = ((int32_t)x_raw * 1000) / 16384;
+    // y_raw = (int16_t)(i2c_rx_buffer[2] << 8 | i2c_rx_buffer[3]);
+    // z_raw = (int16_t)(i2c_rx_buffer[4] << 8 | i2c_rx_buffer[5]);
 
-    // sprintf((char *)buff, "%ld,%ld,%ld\r\n", x_mg);
-    // HAL_UART_Transmit(&huart2, buff, strlen((char *)buff), HAL_MAX_DELAY);
-    // HAL_Delay(50);
+    // // Convert to mg (assuming +/- 4g range, sensitivity = 16384 LSB/g)
+    // x_mg = ((int32_t)x_raw * 1000) / 8192;
+    // y_mg = ((int32_t)y_raw * 1000) / 8192;
+    // z_mg = ((int32_t)z_raw * 1000) / 8192;
 
-    x_raw = (int16_t)(i2c_rx_buffer[0] << 8 | i2c_rx_buffer[1]);
-    y_raw = (int16_t)(i2c_rx_buffer[2] << 8 | i2c_rx_buffer[3]);
-    z_raw = (int16_t)(i2c_rx_buffer[4] << 8 | i2c_rx_buffer[5]);
-
-    // Convert to mg (assuming +/- 4g range, sensitivity = 16384 LSB/g)
-    x_mg = ((int32_t)x_raw * 1000) / 16384.0;
-    y_mg = ((int32_t)y_raw * 1000) / 16384.0;
-    z_mg = ((int32_t)z_raw * 1000) / 16384.0;
-
-    // Format for Serial Plotter: "x,y,z\r\n"
-    sprintf((char *)buff, "%ld,%ld,%ld\r\n", x_raw, y_raw, z_raw);
-    HAL_UART_Transmit(&huart2, buff, strlen((char *)buff), HAL_MAX_DELAY);
+    // // Format for Serial Plotter: "x,y,z\r\n"
+    // sprintf((char *)buff, "%ld,%ld,%ld\r\n", x_raw, y_raw, z_raw);
+    // HAL_UART_Transmit(&huart1, buff, strlen((char *)buff), HAL_MAX_DELAY);
+    // HAL_Delay(100);
 
     /* USER CODE END WHILE */
 
@@ -206,7 +212,7 @@ static void MX_I2C1_Init(void) {
 
   /* USER CODE END I2C1_Init 1 */
   hi2c1.Instance = I2C1;
-  hi2c1.Init.Timing = 0x10D19CE4;
+  hi2c1.Init.Timing = 0x10909CEC;
   hi2c1.Init.OwnAddress1 = 0;
   hi2c1.Init.AddressingMode = I2C_ADDRESSINGMODE_7BIT;
   hi2c1.Init.DualAddressMode = I2C_DUALADDRESS_DISABLE;
@@ -232,6 +238,38 @@ static void MX_I2C1_Init(void) {
   /* USER CODE BEGIN I2C1_Init 2 */
 
   /* USER CODE END I2C1_Init 2 */
+}
+
+/**
+ * @brief USART1 Initialization Function
+ * @param None
+ * @retval None
+ */
+static void MX_USART1_UART_Init(void) {
+
+  /* USER CODE BEGIN USART1_Init 0 */
+
+  /* USER CODE END USART1_Init 0 */
+
+  /* USER CODE BEGIN USART1_Init 1 */
+
+  /* USER CODE END USART1_Init 1 */
+  huart1.Instance = USART1;
+  huart1.Init.BaudRate = 115200;
+  huart1.Init.WordLength = UART_WORDLENGTH_8B;
+  huart1.Init.StopBits = UART_STOPBITS_1;
+  huart1.Init.Parity = UART_PARITY_NONE;
+  huart1.Init.Mode = UART_MODE_TX_RX;
+  huart1.Init.HwFlowCtl = UART_HWCONTROL_NONE;
+  huart1.Init.OverSampling = UART_OVERSAMPLING_16;
+  huart1.Init.OneBitSampling = UART_ONE_BIT_SAMPLE_DISABLE;
+  huart1.AdvancedInit.AdvFeatureInit = UART_ADVFEATURE_NO_INIT;
+  if (HAL_UART_Init(&huart1) != HAL_OK) {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN USART1_Init 2 */
+
+  /* USER CODE END USART1_Init 2 */
 }
 
 /**
@@ -328,31 +366,6 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
   /* NOTE: This function should not be modified, when the callback is needed,
            the HAL_GPIO_EXTI_Callback could be implemented in the user file
    */
-}
-
-void i2c_scan(void) {
-  uint8_t buf[64];
-  sprintf((char *)buf, "Scanning I2C bus...\r\n");
-  HAL_UART_Transmit(&huart2, buf, strlen((char *)buf), HAL_MAX_DELAY);
-
-  int found = 0;
-
-  for (uint8_t addr = 1; addr < 128; addr++) {
-    HAL_StatusTypeDef result = HAL_I2C_IsDeviceReady(&hi2c1, addr << 1, 2, 10);
-    if (result == HAL_OK) {
-      sprintf((char *)buf, "Device found at 0x%02X\r\n", addr);
-      HAL_UART_Transmit(&huart2, buf, strlen((char *)buf), HAL_MAX_DELAY);
-      found++;
-    }
-  }
-
-  if (found == 0) {
-    sprintf((char *)buf, "No devices found.\r\n");
-    HAL_UART_Transmit(&huart2, buf, strlen((char *)buf), HAL_MAX_DELAY);
-  } else {
-    sprintf((char *)buf, "Scan complete. %d device(s) found.\r\n", found);
-    HAL_UART_Transmit(&huart2, buf, strlen((char *)buf), HAL_MAX_DELAY);
-  }
 }
 
 /* USER CODE END 4 */
